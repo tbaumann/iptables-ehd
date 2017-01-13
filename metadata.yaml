@@ -1,19 +1,15 @@
 name: iptables-peer-ssh
-summary: <Fill in summary here>
-maintainer: Tilman Baumann Work <Tilman.Baumann.Work@zuse.tilman.baumann.name>
+summary: Will open SSH to all units running the same charm instance
+maintainer: Tilman Baumann <Tilman.Baumann@canonical.com>
 description: |
-  <Multi-line description here>
+  This charm is designed to open the SSH port to all nodes of the same type (running the same charm)
 tags:
-  # Replace "misc" with one or more whitelisted tags from this list:
-  # https://jujucharms.com/docs/stable/authors-charm-metadata
-  - misc
+  - security
+  - network
 subordinate: false
-provides:
-  provides-relation:
-    interface: interface-name
-requires:
-  requires-relation:
-    interface: interface-name
 peers:
-  peer-relation:
-    interface: interface-name
+  ssh-peers:
+    interface: peer-discovery
+series:
+  - xenial
+  - trusty

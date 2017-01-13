@@ -1,1 +1,7 @@
-includes: ['layer:basic']  # if you use any interfaces, add them here
+includes: ['layer:basic', 'interface:peer-discovery']
+repo: "https://github.com/tbaumann/iptables-peer-ssh.git"
+options:
+  basic:
+    packages:
+      - ipset
+      - iptables

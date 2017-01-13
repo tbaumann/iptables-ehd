@@ -1,14 +1,9 @@
 options:
-  string-option:
+  ssh-allow-networks:
     type: string
-    default: "Default Value"
-    description: "A short description of the configuration option"
-  boolean-option:
-    type: boolean
-    default: False
-    description: "A short description of the configuration option"
-  int-option:
-    type: int
-    default: 9001
-    description: "A short description of the configuration option"
-
+    default: ""
+    description: "Space seperated list of subents in CIDR notation which are allowed to connect to ssh"
+  ssh-allow-hosts:
+    type: string
+    default: ""
+    description: "Space seperated list of addresses which are allowed to connect to ssh"
