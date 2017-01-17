@@ -10,9 +10,9 @@ It may only be useful as a template to implement similar things.
 
 # Usage
 
-Step by step instructions on using the charm:
-
+```
 juju deploy iptables-peer-ssh --to unit
+```
 
 This charm is designed to run together with other charm on the same unit.
 Running it stand alone makes very little sense.
