@@ -19,6 +19,7 @@ from charmhelpers.core.hookenv import (
 )
 from charms.reactive.helpers import data_changed
 from subprocess import call
+import time
 
 
 @when_not('iptables-peer-ssh.installed')
@@ -64,18 +65,18 @@ def upgrade_charm():
 
 @when('ssh-peers.joined ')
 def connected(peers):
+    log("ssh-peers.joined")
     hosts = peers.units()
     if data_changed('ssh-peers', hosts):
         ipset_update('ssh-peers', hosts)
-    remove_state('ssh-peers.joined')
 
 
 @when('ssh-peers.departed')
 def departed(peers):
+    log("ssh-peers.departed")
     hosts = peers.units()
     if data_changed('ssh-peers', hosts):
         ipset_update('ssh-peers', hosts)
-    remove_state('ssh-peers.departed')
 
 
 @when('config.changed.ssh-allow-hosts')
