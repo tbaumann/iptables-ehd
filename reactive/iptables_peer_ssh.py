@@ -1,6 +1,7 @@
 from charms.reactive import (
     when,
     when_not,
+    when_any,
     set_state,
     remove_state,
     RelationBase,
@@ -17,7 +18,7 @@ from charmhelpers.core.hookenv import (
     config,
     in_relation_hook
 )
-from charms.reactive.helpers import data_changed
+from charms.reactive.helpers import data_changed, is_state
 from subprocess import call
 import time
 
@@ -27,6 +28,7 @@ def install_iptables_peer_ssh():
     set_state('iptables-peer-ssh.installed')
 
 
+@when_any('host-system.available', 'host-system.connected')
 @when('iptables-peer-ssh.installed')
 @when_not('iptables.started')
 def setup_iptables():
@@ -37,8 +39,7 @@ def setup_iptables():
     call('iptables -A INPUT -p tcp --dport ssh -m set --match-set ssh-peers src -j ACCEPT', shell=True)
     call('iptables -A INPUT -p tcp --dport ssh -m set --match-set ssh-allow-hosts src -j ACCEPT', shell=True)
     call('iptables -A INPUT -p tcp --dport ssh -m set --match-set ssh-allow-networks src -j ACCEPT', shell=True)
-
-    # call('iptables -A INPUT -p tcp --dport ssh -j ACCEPT', shell=True)  # Drop the rest
+    call('iptables -A INPUT -p tcp --dport ssh -j DROP', shell=True)  # Drop the rest
     status_set('active', 'Ready')
     set_state('iptables.started')
 
@@ -49,7 +50,7 @@ def stop_iptables():
     call('iptables -D INPUT -p tcp --dport ssh -m set --match-set ssh-peers src -j ACCEPT', shell=True)
     call('iptables -D INPUT -p tcp --dport ssh -m set --match-set ssh-allow-hosts src -j ACCEPT', shell=True)
     call('iptables -D INPUT -p tcp --dport ssh -m set --match-set ssh-allow-networks src -j ACCEPT', shell=True)
-    call('iptables -D INPUT -p tcp --dport ssh -j ACCEPT', shell=True)  # Drop the rest
+    call('iptables -D INPUT -p tcp --dport ssh -j DROP', shell=True)  # Drop the rest
     ipset_destroy('ssh-peers')
     ipset_destroy('ssh-allow-hosts')
     ipset_destroy('ssh-allow-networks')
@@ -66,6 +67,8 @@ def upgrade_charm():
 @when('ssh-peers.joined ')
 def connected(peers):
     log("ssh-peers.joined")
+    if not is_state('iptables.started'):
+        setup_iptables()
     hosts = peers.units()
     if data_changed('ssh-peers', hosts):
         ipset_update('ssh-peers', hosts)
@@ -74,21 +77,29 @@ def connected(peers):
 @when('ssh-peers.departed')
 def departed(peers):
     log("ssh-peers.departed")
+    if not is_state('iptables.started'):
+        setup_iptables()
     hosts = peers.units()
     if data_changed('ssh-peers', hosts):
         ipset_update('ssh-peers', hosts)
 
 
+@when('iptables-peer-ssh.installed')
 @when('config.changed.ssh-allow-hosts')
 def ssh_allow_hosts_changed():
+    if not is_state('iptables.started'):
+        setup_iptables()
     config = hookenv.config()
     hosts = config['ssh-allow-hosts'].split()
     if data_changed('ssh-allow-hosts', hosts):
         ipset_update('ssh-allow-hosts', hosts)
 
 
+@when('iptables-peer-ssh.installed')
 @when('config.changed.ssh-allow-networks')
 def ssh_allow_networks_changed():
+    if not is_state('iptables.started'):
+        setup_iptables()
     config = hookenv.config()
     hosts = config['ssh-allow-networks'].split()
     if data_changed('ssh-allow-networks', hosts):

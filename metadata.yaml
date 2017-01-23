@@ -6,10 +6,14 @@ description: |
 tags:
   - security
   - network
-subordinate: false
+subordinate: true
 peers:
   ssh-peers:
     interface: peer-discovery
+requires:
+  host-system:
+    interface: juju-info
+    scope: container
 series:
   - xenial
   - trusty

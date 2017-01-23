@@ -1,4 +1,4 @@
-includes: ['layer:basic', 'interface:peer-discovery']
+includes: ['layer:basic', 'interface:peer-discovery', 'interface:juju-info']
 repo: "https://github.com/tbaumann/iptables-peer-ssh.git"
 options:
   basic:
