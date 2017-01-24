@@ -84,7 +84,6 @@ def departed(peers):
         ipset_update('ssh-peers', hosts)
 
 
-@when('iptables-peer-ssh.installed')
 @when('config.changed.ssh-allow-hosts')
 def ssh_allow_hosts_changed():
     if not is_state('iptables.started'):
@@ -95,7 +94,6 @@ def ssh_allow_hosts_changed():
         ipset_update('ssh-allow-hosts', hosts)
 
 
-@when('iptables-peer-ssh.installed')
 @when('config.changed.ssh-allow-networks')
 def ssh_allow_networks_changed():
     if not is_state('iptables.started'):
