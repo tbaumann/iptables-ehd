@@ -10,6 +10,7 @@ subordinate: true
 peers:
   ssh-peers:
     interface: peer-discovery
+    scope: global
 requires:
   host-system:
     interface: juju-info
