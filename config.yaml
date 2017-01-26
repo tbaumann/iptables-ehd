@@ -7,3 +7,7 @@ options:
     type: string
     default: ""
     description: "Space seperated list of addresses which are allowed to connect to ssh"
+  enforce:
+    type: boolean
+    default: True
+    description: Enable or disable enforcement of firewall rules. (For debugging and trouble shooting)

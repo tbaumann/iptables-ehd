@@ -31,26 +31,38 @@ def install_iptables_peer_ssh():
 @when_any('host-system.available', 'host-system.connected')
 @when('iptables-peer-ssh.installed')
 @when_not('iptables.started')
-def setup_iptables():
+def iptables_start():
+    log('Starting firewall')
     status_set('maintenance', 'Setting up IPTables')
     ipset_create('ssh-peers', 'hash:ip')
     ipset_create('ssh-allow-hosts', 'hash:ip')
     ipset_create('ssh-allow-networks', 'hash:net')
+
+    hosts = get_ssh_peers()
+    ipset_update('ssh-peers', hosts)
+
+    status_set('active', 'Ready')
+    set_state('iptables.started')
+    check_enforce()
+
+
+@when_not('enforcing')
+@when('enforce')
+def enforce():
+    log('Enforcing rules')
     call('iptables -A INPUT -p tcp --dport ssh -m set --match-set ssh-peers src -j ACCEPT', shell=True)
     call('iptables -A INPUT -p tcp --dport ssh -m set --match-set ssh-allow-hosts src -j ACCEPT', shell=True)
     call('iptables -A INPUT -p tcp --dport ssh -m set --match-set ssh-allow-networks src -j ACCEPT', shell=True)
     call('iptables -A INPUT -p tcp --dport ssh -j DROP', shell=True)  # Drop the rest
-    status_set('active', 'Ready')
-    set_state('iptables.started')
+    set_state('enforcing')
 
 
 @hook('stop')
-def stop_iptables():
+def iptables_stop():
+    log('Stopping firewall')
     status_set('maintenance', 'Stopping IPTables')
-    call('iptables -D INPUT -p tcp --dport ssh -m set --match-set ssh-peers src -j ACCEPT', shell=True)
-    call('iptables -D INPUT -p tcp --dport ssh -m set --match-set ssh-allow-hosts src -j ACCEPT', shell=True)
-    call('iptables -D INPUT -p tcp --dport ssh -m set --match-set ssh-allow-networks src -j ACCEPT', shell=True)
-    call('iptables -D INPUT -p tcp --dport ssh -j DROP', shell=True)  # Drop the rest
+    if is_state('enforcing'):
+        not_enforce()
     ipset_destroy('ssh-peers')
     ipset_destroy('ssh-allow-hosts')
     ipset_destroy('ssh-allow-networks')
@@ -58,17 +70,28 @@ def stop_iptables():
     status_set('maintenance', 'Stopped')
 
 
+@when('enforcing')
+@when_not('enforce')
+def not_enforce():
+    log('Stop enforcing rules')
+    call('iptables -D INPUT -p tcp --dport ssh -m set --match-set ssh-peers src -j ACCEPT', shell=True)
+    call('iptables -D INPUT -p tcp --dport ssh -m set --match-set ssh-allow-hosts src -j ACCEPT', shell=True)
+    call('iptables -D INPUT -p tcp --dport ssh -m set --match-set ssh-allow-networks src -j ACCEPT', shell=True)
+    call('iptables -D INPUT -p tcp --dport ssh -j DROP', shell=True)  # Drop the rest
+    remove_state('enforcing')
+
+
 @hook('upgrade-charm')
 def upgrade_charm():
-    stop_iptables()
-    setup_iptables()
+    iptables_stop()
+    iptables_start()
 
 
-@when('ssh-peers.joined ')
+@when('ssh-peers.joined')
 def connected(peers):
     log("ssh-peers.joined")
     if not is_state('iptables.started'):
-        setup_iptables()
+        iptables_start()
     hosts = peers.units()
     if data_changed('ssh-peers', hosts):
         ipset_update('ssh-peers', hosts)
@@ -78,7 +101,7 @@ def connected(peers):
 def departed(peers):
     log("ssh-peers.departed")
     if not is_state('iptables.started'):
-        setup_iptables()
+        iptables_start()
     hosts = peers.units()
     if data_changed('ssh-peers', hosts):
         ipset_update('ssh-peers', hosts)
@@ -87,7 +110,7 @@ def departed(peers):
 @when('config.changed.ssh-allow-hosts')
 def ssh_allow_hosts_changed():
     if not is_state('iptables.started'):
-        setup_iptables()
+        iptables_start()
     config = hookenv.config()
     hosts = config['ssh-allow-hosts'].split()
     if data_changed('ssh-allow-hosts', hosts):
@@ -97,11 +120,24 @@ def ssh_allow_hosts_changed():
 @when('config.changed.ssh-allow-networks')
 def ssh_allow_networks_changed():
     if not is_state('iptables.started'):
-        setup_iptables()
+        iptables_start()
     config = hookenv.config()
     hosts = config['ssh-allow-networks'].split()
     if data_changed('ssh-allow-networks', hosts):
         ipset_update('ssh-allow-networks', hosts)
+
+
+@when('config.changed.enforce')
+def change_enforce():
+    check_enforce()
+
+
+def check_enforce():
+    config = hookenv.config()
+    if config['enforce']:
+        set_state('enforce')
+    else:
+        remove_state('enforce')
 
 
 def ipset_create(name, type):
@@ -124,3 +160,11 @@ def ipset_update(name, hosts):
     call(['ipset', 'swap', tmpname, name])
     call(['ipset', 'flush', tmpname])
     log("swapped ipsed {}".format(name))
+
+
+def get_ssh_peers():
+    hosts = []
+    for rel_id in relation_ids('ssh-peers'):
+        for unit in related_units(rel_id):
+            hosts.append(relation_get('private-address', unit, rel_id))
+    return hosts
