@@ -10,22 +10,35 @@ It may only be useful as a template to implement similar things.
 
 # Usage
 
+This charm is a subordinate charm. It must be attached to a another application.
+All nodes of the same application it is attached to will allow ssh amongst each other.
+
  ```
-juju deploy iptables-peer-ssh --to unit
+juju deploy iptables-peer-ssh
+juju juju add-relation iptables-peer-ssh <yourapp>
 ```
 
-This charm is designed to run together with other charms on the same unit.
-Running it stand alone makes very little sense.
 
 ## Scale out Usage
 
-Add units to all hosts which should be covered by this ssh permission.
+Scale the application which this charm is subordinate to.
 
 
 # Configuration
 
 Make sure you allow access from your control nodes if you need ssh access for
 debug purposes.
+
+The 'enforce' setting can be set to false to temporarily disable enforcement of
+the firewall rules.
+
+
+# Troubleshooting
+
+If you lock yourself out from accessing machines via ssh. set enforce to false.
+```
+juju config iptables-peer-ssh enforce=false
+```
 
 
 ## iptables-peer-ssh
