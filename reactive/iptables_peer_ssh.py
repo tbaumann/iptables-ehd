@@ -20,6 +20,9 @@ from charmhelpers.core.hookenv import (
 )
 from charms.reactive.helpers import data_changed, is_state
 from subprocess import call
+from charmhelpers.contrib.network.ip import get_iface_addr
+from charmhelpers.contrib.network.ip import is_address_in_network
+from netifaces import interfaces
 import time
 
 
@@ -87,12 +90,40 @@ def upgrade_charm():
     iptables_start()
 
 
+def get_all_addresses():
+    addresses = []
+    for iface in interfaces():
+        if not iface == 'lo':
+            for addr in get_iface_addr(iface=iface, inc_aliases=True, fatal=False):
+                addresses.append(addr)
+    return addresses
+
+
+def get_all_remote_addresses(peers):
+    addresses = []
+    for conv in peers.conversations():
+        for addr in str(conv.get_remote('addresses').split(" ")):
+            addresses.append(addr)
+    return addresses
+
+
 @when('ssh-peers.joined')
 def connected(peers):
     log("ssh-peers.joined")
+    config = hookenv.config()
+    addresses = get_all_addresses()
+    peers.set_remote('addresses', ' '.join(addresses))
     if not is_state('iptables.started'):
         iptables_start()
-    hosts = peers.units()
+    hosts = []
+    if config['use-private-addresses']:
+        hosts = get_all_remote_addresses(peers)
+    else:
+        hosts = peers.units()
+    if config['filter-peers-by-network']:
+        hosts = filter(lambda addr: is_address_in_network(config['filter-peers-by-network'], addr), hosts)
+    for host in hosts:
+        log("connected(): {}".format(host))
     if data_changed('ssh-peers', hosts):
         ipset_update('ssh-peers', hosts)
 
@@ -132,6 +163,18 @@ def change_enforce():
     check_enforce()
 
 
+@when('config.changed.use-private-addresses')
+def change_use_private():
+    hosts = get_ssh_peers()
+    ipset_update('ssh-peers', hosts)
+
+
+@when('config.changed.filter-peers-by-network')
+def change_use_private():
+    hosts = get_ssh_peers()
+    ipset_update('ssh-peers', hosts)
+
+
 def check_enforce():
     config = hookenv.config()
     if config['enforce']:
@@ -164,7 +207,15 @@ def ipset_update(name, hosts):
 
 def get_ssh_peers():
     hosts = []
+    config = hookenv.config()
     for rel_id in relation_ids('ssh-peers'):
         for unit in related_units(rel_id):
-            hosts.append(relation_get('private-address', unit, rel_id))
+            if config['use-private-addresses']:
+                hosts.append(relation_get('private-address', unit, rel_id))
+            else:
+                addresses = str(relation_get('addresses', unit, rel_id))
+                for addr in addresses.split(" "):
+                    hosts.append(addr)
+    if config['filter-peers-by-network']:
+        hosts = filter(lambda addr: is_address_in_network(config['filter-peers-by-network'], addr), hosts)
     return hosts

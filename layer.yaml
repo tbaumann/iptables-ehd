@@ -5,3 +5,4 @@ options:
     packages:
       - ipset
       - iptables
+      - python3-netifaces

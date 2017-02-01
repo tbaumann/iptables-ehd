@@ -11,3 +11,11 @@ options:
     type: boolean
     default: True
     description: Enable or disable enforcement of firewall rules. (For debugging and trouble shooting)
+  use-private-addresses:
+    type: boolean
+    default: True
+    description: By default all peers are determined by their provate-address as it is known by juju. Sometimes you may need just all addresses of the hosts.
+  filter-peers-by-network:
+    type: string
+    default: ""
+    description: If this option is set, only peer addresses in this subnet will be used.
