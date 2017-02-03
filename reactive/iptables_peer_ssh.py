@@ -120,8 +120,9 @@ def connected(peers):
         hosts = get_all_remote_addresses(peers)
     else:
         hosts = peers.units()
-    if config['filter-peers-by-network']:
-        hosts = filter(lambda addr: is_address_in_network(config['filter-peers-by-network'], addr), hosts)
+    filtered_networks = get_filter_peers_by_networks(config)
+    if filtered_networks:
+        hosts = filter(lambda addr: is_filtered(addr, filtered_networks), hosts)
     if data_changed('ssh-peers', hosts):
         ipset_update('ssh-peers', hosts)
 
@@ -167,7 +168,7 @@ def change_use_private():
     ipset_update('ssh-peers', hosts)
 
 
-@when('config.changed.filter-peers-by-network')
+@when('config.changed.filter-peers-by-networks')
 def change_use_private():
     hosts = get_ssh_peers()
     ipset_update('ssh-peers', hosts)
@@ -214,9 +215,20 @@ def get_ssh_peers():
                 addresses = str(relation_get('addresses', unit, rel_id))
                 for addr in addresses.split(" "):
                     hosts.append(addr)
-    if config['filter-peers-by-network']:
-        hosts = filter(lambda addr: is_address_in_network(config['filter-peers-by-network'], addr), hosts)
+    filtered_networks = get_filter_peers_by_networks(config)
+    if filtered_networks:
+        hosts = filter(lambda addr: is_filtered(addr, filtered_networks), hosts)
     return hosts
 
-def is_filtered(address):
-        hosts = filter(lambda addr: is_address_in_network(config['filter-peers-by-network'], addr), hosts)
+
+def get_filter_peers_by_networks(config):
+    return config['filter-peers-by-networks'].split()
+
+
+def is_filtered(address, networks):
+    found = False
+    for net in networks:
+        if is_address_in_network(net, address):
+            found = True
+            break
+    return found
