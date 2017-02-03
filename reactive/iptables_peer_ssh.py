@@ -122,8 +122,6 @@ def connected(peers):
         hosts = peers.units()
     if config['filter-peers-by-network']:
         hosts = filter(lambda addr: is_address_in_network(config['filter-peers-by-network'], addr), hosts)
-    for host in hosts:
-        log("connected(): {}".format(host))
     if data_changed('ssh-peers', hosts):
         ipset_update('ssh-peers', hosts)
 
@@ -219,3 +217,6 @@ def get_ssh_peers():
     if config['filter-peers-by-network']:
         hosts = filter(lambda addr: is_address_in_network(config['filter-peers-by-network'], addr), hosts)
     return hosts
+
+def is_filtered(address):
+        hosts = filter(lambda addr: is_address_in_network(config['filter-peers-by-network'], addr), hosts)
