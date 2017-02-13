@@ -44,6 +44,9 @@ def iptables_start():
     hosts = get_ssh_peers()
     ipset_update('ssh-peers', hosts)
 
+    ssh_allow_hosts_changed()
+    ssh_allow_networks_changed()
+
     status_set('active', 'Ready')
     set_state('iptables.started')
     check_enforce()
@@ -88,9 +91,6 @@ def not_enforce():
 def upgrade_charm():
     iptables_stop()
     iptables_start()
-    ssh_allow_hosts_changed()
-    ssh_allow_networks_changed()
-
 
 def get_all_addresses():
     addresses = []
