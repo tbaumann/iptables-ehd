@@ -88,6 +88,8 @@ def not_enforce():
 def upgrade_charm():
     iptables_stop()
     iptables_start()
+    ssh_allow_hosts_changed()
+    ssh_allow_networks_changed()
 
 
 def get_all_addresses():
