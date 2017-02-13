@@ -102,7 +102,10 @@ def get_all_addresses():
 def get_all_remote_addresses(peers):
     addresses = []
     for conv in peers.conversations():
-        for addr in str(conv.get_remote('addresses').split(" ")):
+        remote_addresses = str(conv.get_remote('addresses'))
+        if not remote_addresses:
+            next
+        for addr in remote_addresses.split(" "):
             addresses.append(addr)
     return addresses
 
