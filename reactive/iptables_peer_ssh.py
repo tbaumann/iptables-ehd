@@ -92,11 +92,12 @@ def upgrade_charm():
     iptables_stop()
     iptables_start()
 
+
 def get_all_addresses():
     addresses = []
     for iface in interfaces():
         if not iface == 'lo':
-            for addr in get_iface_addr(iface=iface, inc_aliases=True, fatal=False):
+            for addr in get_iface_addr(iface=iface, inc_aliases=True, fatal=False) or []:
                 addresses.append(addr)
     return addresses
 
@@ -104,10 +105,10 @@ def get_all_addresses():
 def get_all_remote_addresses(peers):
     addresses = []
     for conv in peers.conversations():
-        remote_addresses = str(conv.get_remote('addresses'))
-        if not remote_addresses:
-            next
-        for addr in remote_addresses.split(" "):
+        remote_addresses = conv.get_remote('addresses')
+        if remote_addresses is None:
+            continue
+        for addr in str(remote_addresses.split(" ")):
             addresses.append(addr)
     return addresses
 
@@ -120,14 +121,7 @@ def connected(peers):
     peers.set_remote('addresses', ' '.join(addresses))
     if not is_state('iptables.started'):
         iptables_start()
-    hosts = []
-    if config['use-private-addresses']:
-        hosts = get_all_remote_addresses(peers)
-    else:
-        hosts = peers.units()
-    filtered_networks = get_filter_peers_by_networks(config)
-    if filtered_networks:
-        hosts = filter(lambda addr: is_filtered(addr, filtered_networks), hosts)
+    hosts = get_ssh_peers()
     if data_changed('ssh-peers', hosts):
         ipset_update('ssh-peers', hosts)
 
@@ -217,12 +211,14 @@ def get_ssh_peers():
             if config['use-private-addresses']:
                 hosts.append(relation_get('private-address', unit, rel_id))
             else:
-                addresses = str(relation_get('addresses', unit, rel_id))
-                for addr in addresses.split(" "):
+                addresses = relation_get('addresses', unit, rel_id)
+                if addresses is None:
+                    continue
+                for addr in str(addresses.split(" ")):
                     hosts.append(addr)
     filtered_networks = get_filter_peers_by_networks(config)
     if filtered_networks:
-        hosts = filter(lambda addr: is_filtered(addr, filtered_networks), hosts)
+        hosts = list(filter(lambda addr: is_filtered(addr, filtered_networks), hosts))
     return hosts
 
 
