@@ -41,9 +41,9 @@ def iptables_start():
     ipset_create('ssh-allow-hosts', 'hash:ip')
     ipset_create('ssh-allow-networks', 'hash:net')
 
-    hosts = get_ssh_peers()
-    ipset_update('ssh-peers', hosts)
-
+    write_ssh_peers()
+    ssh_allow_hosts_changed()
+    ssh_allow_networks_changed()
 
     status_set('active', 'Ready')
     set_state('iptables.started')
@@ -89,8 +89,6 @@ def not_enforce():
 def upgrade_charm():
     iptables_stop()
     iptables_start()
-    ssh_allow_hosts_changed()
-    ssh_allow_networks_changed()
 
 
 def get_all_addresses():
@@ -119,41 +117,37 @@ def connected(peers):
     config = hookenv.config()
     addresses = get_all_addresses()
     peers.set_remote('addresses', ' '.join(addresses))
-    if not is_state('iptables.started'):
-        iptables_start()
-    hosts = get_ssh_peers()
-    if data_changed('ssh-peers', hosts):
-        ipset_update('ssh-peers', hosts)
+    if is_state('iptables.started'):
+        hosts = get_ssh_peers()
+        if data_changed('ssh-peers', hosts):
+            ipset_update('ssh-peers', hosts)
 
 
 @when('ssh-peers.departed')
 def departed(peers):
     log("ssh-peers.departed")
-    if not is_state('iptables.started'):
-        iptables_start()
-    hosts = peers.units()
-    if data_changed('ssh-peers', hosts):
-        ipset_update('ssh-peers', hosts)
+    if is_state('iptables.started'):
+        hosts = get_ssh_peers()
+        if data_changed('ssh-peers', hosts):
+            ipset_update('ssh-peers', hosts)
 
 
 @when('config.changed.ssh-allow-hosts')
 def ssh_allow_hosts_changed():
-    if not is_state('iptables.started'):
-        iptables_start()
-    config = hookenv.config()
-    hosts = config['ssh-allow-hosts'].split()
-    if data_changed('ssh-allow-hosts', hosts):
-        ipset_update('ssh-allow-hosts', hosts)
+    if is_state('iptables.started'):
+        config = hookenv.config()
+        hosts = config['ssh-allow-hosts'].split()
+        if data_changed('ssh-allow-hosts', hosts):
+            ipset_update('ssh-allow-hosts', hosts)
 
 
 @when('config.changed.ssh-allow-networks')
 def ssh_allow_networks_changed():
-    if not is_state('iptables.started'):
-        iptables_start()
-    config = hookenv.config()
-    hosts = config['ssh-allow-networks'].split()
-    if data_changed('ssh-allow-networks', hosts):
-        ipset_update('ssh-allow-networks', hosts)
+    if is_state('iptables.started'):
+        config = hookenv.config()
+        hosts = config['ssh-allow-networks'].split()
+        if data_changed('ssh-allow-networks', hosts):
+            ipset_update('ssh-allow-networks', hosts)
 
 
 @when('config.changed.enforce')
@@ -233,3 +227,9 @@ def is_filtered(address, networks):
             found = True
             break
     return found
+
+
+def write_ssh_peers():
+    hosts = get_ssh_peers()
+    if data_changed('ssh-peers', hosts):
+        ipset_update('ssh-peers', hosts)
