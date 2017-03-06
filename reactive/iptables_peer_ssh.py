@@ -81,7 +81,7 @@ def not_enforce():
     call('iptables -D INPUT -p tcp --dport ssh -m set --match-set ssh-peers src -j ACCEPT', shell=True)
     call('iptables -D INPUT -p tcp --dport ssh -m set --match-set ssh-allow-hosts src -j ACCEPT', shell=True)
     call('iptables -D INPUT -p tcp --dport ssh -m set --match-set ssh-allow-networks src -j ACCEPT', shell=True)
-    call('iptables -D INPUT -p tcp --dport ssh -j DROP', shell=True)  # Drop the rest
+    call('iptables --policy INPUT DROP', shell=True)  # Default INPUT policy DROP
     remove_state('enforcing')
 
 
