@@ -54,9 +54,11 @@ def iptables_start():
 @when('enforce')
 def enforce():
     log('Enforcing rules')
-    call('iptables -A INPUT -p tcp --dport ssh -m set --match-set ssh-peers src -j ACCEPT', shell=True)
-    call('iptables -A INPUT -p tcp --dport ssh -m set --match-set ssh-allow-hosts src -j ACCEPT', shell=True)
-    call('iptables -A INPUT -p tcp --dport ssh -m set --match-set ssh-allow-networks src -j ACCEPT', shell=True)
+    call('iptables -A INPUT -p tcp --dport ssh -m set --match-set ssh-peers src -m comment --comment "SSH peers" -j ACCEPT', shell=True)
+    call('iptables -A INPUT -p tcp --dport ssh -m set --match-set ssh-allow-hosts src -m comment --comment "SSH whitelist" -j ACCEPT', shell=True)
+    call('iptables -A INPUT -p tcp --dport ssh -m set --match-set ssh-allow-networks src -m comment --comment "SSH whitelist" -j ACCEPT', shell=True)
+    call('iptables -A INPUT -p tcp -m multiport --dports 5900:6900 -m set --match-set ssh-allow-hosts src -m comment --comment "VNC for proxy" -j ACCEPT', shell=True)
+    call('iptables -A INPUT -p tcp -m multiport --dports 5900:6900 -m set --match-set ssh-allow-networks src -m comment --comment "VNC for proxy" -j ACCEPT', shell=True)
     call('iptables --policy INPUT DROP', shell=True)  # Default INPUT policy DROP
     set_state('enforcing')
 
@@ -78,9 +80,11 @@ def iptables_stop():
 @when_not('enforce')
 def not_enforce():
     log('Stop enforcing rules')
-    call('iptables -D INPUT -p tcp --dport ssh -m set --match-set ssh-peers src -j ACCEPT', shell=True)
-    call('iptables -D INPUT -p tcp --dport ssh -m set --match-set ssh-allow-hosts src -j ACCEPT', shell=True)
-    call('iptables -D INPUT -p tcp --dport ssh -m set --match-set ssh-allow-networks src -j ACCEPT', shell=True)
+    call('iptables -D INPUT -p tcp --dport ssh -m set --match-set ssh-peers src -m comment --comment "SSH peers" -j ACCEPT', shell=True)
+    call('iptables -D INPUT -p tcp --dport ssh -m set --match-set ssh-allow-hosts src -m comment --comment "SSH whitelist" -j ACCEPT', shell=True)
+    call('iptables -D INPUT -p tcp --dport ssh -m set --match-set ssh-allow-networks src -m comment --comment "SSH whitelist" -j ACCEPT', shell=True)
+    call('iptables -D INPUT -p tcp -m multiport --dports 5900:6900 -m set --match-set ssh-allow-hosts src -m comment --comment "VNC for proxy" -j ACCEPT', shell=True)
+    call('iptables -D INPUT -p tcp -m multiport --dports 5900:6900 -m set --match-set ssh-allow-networks src -m comment --comment "VNC for proxy" -j ACCEPT', shell=True)
     call('iptables --policy INPUT ACCEPT', shell=True)  # Default INPUT policy ACCEPT
     remove_state('enforcing')
 
