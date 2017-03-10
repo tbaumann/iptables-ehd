@@ -19,24 +19,19 @@ from charmhelpers.core.hookenv import (
     in_relation_hook
 )
 from charms.reactive.helpers import data_changed, is_state
-from subprocess import call
+from subprocess import call, DEVNULL
 from charmhelpers.contrib.network.ip import get_iface_addr
 from charmhelpers.contrib.network.ip import is_address_in_network
 from netifaces import interfaces
 import time
 
 
-@when_not('iptables-peer-ssh.installed')
-def install_iptables_peer_ssh():
-    set_state('iptables-peer-ssh.installed')
-
-
-@when_any('host-system.available', 'host-system.connected')
-@when('iptables-peer-ssh.installed')
+# @when_any('host-system.available', 'host-system.connected')
 @when_not('iptables.started')
 def iptables_start():
     log('Starting firewall')
     status_set('maintenance', 'Setting up IPTables')
+    call('iptables -I NPUT 1 -m state --state ESTABLISHED,RELATED -j ACCEPT', shell=True)
     ipset_create('ssh-peers', 'hash:ip')
     ipset_create('ssh-allow-hosts', 'hash:ip')
     ipset_create('ssh-allow-networks', 'hash:net')
@@ -50,8 +45,18 @@ def iptables_start():
     check_enforce()
 
 
+# Watchdog. Check if we might have rebootet
+@hook('config-changed')
+def watchdog():
+    notrunning = call('ipset list ssh-peers', shell=True, stdout=DEVNULL)
+    if notrunning:
+        log("Looks like we lost some rules. Perhaps there was a reboot. Re-initializing...")
+        remove_state('iptables.started')
+
+
 @when_not('enforcing')
 @when('enforce')
+@when('iptables.started')
 def enforce():
     log('Enforcing rules')
     call('iptables -A INPUT -p tcp --dport ssh -m set --match-set ssh-peers src -m comment --comment "SSH peers" -j ACCEPT', shell=True)
