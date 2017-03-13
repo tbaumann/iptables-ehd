@@ -31,7 +31,7 @@ import time
 def iptables_start():
     log('Starting firewall')
     status_set('maintenance', 'Setting up IPTables')
-    call('iptables -I NPUT 1 -m state --state ESTABLISHED,RELATED -j ACCEPT', shell=True)
+    call('iptables -I INPUT 1 -m state --state ESTABLISHED,RELATED -j ACCEPT', shell=True)
     ipset_create('ssh-peers', 'hash:ip')
     ipset_create('ssh-allow-hosts', 'hash:ip')
     ipset_create('ssh-allow-networks', 'hash:net')
@@ -52,6 +52,7 @@ def watchdog():
     if notrunning:
         log("Looks like we lost some rules. Perhaps there was a reboot. Re-initializing...")
         remove_state('iptables.started')
+        remove_state('enforcing')
 
 
 @when_not('enforcing')
