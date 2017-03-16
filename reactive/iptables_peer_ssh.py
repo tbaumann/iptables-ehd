@@ -116,7 +116,7 @@ def get_all_remote_addresses(peers):
         remote_addresses = conv.get_remote('addresses')
         if remote_addresses is None:
             continue
-        for addr in str(remote_addresses.split(" ")):
+        for addr in str(remote_addresses).split(" "):
             addresses.append(addr)
     return addresses
 
@@ -218,7 +218,7 @@ def get_ssh_peers():
                 addresses = relation_get('addresses', unit, rel_id)
                 if addresses is None:
                     continue
-                for addr in str(addresses.split(" ")):
+                for addr in str(addresses).split(" "):
                     hosts.append(addr)
     filtered_networks = get_filter_peers_by_networks(config)
     if filtered_networks:
