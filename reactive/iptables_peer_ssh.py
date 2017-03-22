@@ -35,6 +35,10 @@ def iptables_start():
     ipset_create('ssh-peers', 'hash:ip')
     ipset_create('ssh-allow-hosts', 'hash:ip')
     ipset_create('ssh-allow-networks', 'hash:net')
+    
+    data_changed('ssh-peers', [])
+    data_changed('ssh-allow-hosts', [])
+    data_changed('ssh-allow-networks', [])
 
     write_ssh_peers()
     ssh_allow_hosts_changed()
